@@ -77,6 +77,66 @@ describe("computeMaximumLoanableAmount", () => {
   })
 })
 
+describe("boundary & precision behavior (financial integrity)", () => {
+  it("handles zero and negative principals without NaN", () => {
+    expect(computeMonthlyAmortization(0, 12, 360)).toBe(0)
+    expect(computeMonthlyAmortization(-5_000, 12, 360)).toBe(0)
+    expect(computeLoanTotals({
+      principal: 0,
+      annualRatePercent: 12,
+      termDays: 360,
+      notarialFee: 500,
+      docStampFee: 200,
+      insuranceFee: 1_200,
+      applicationChargeRate: 0.01,
+    }).netProceeds).toBe(-1_900) // fees still apply to a zero principal draft
+  })
+
+  it("handles the maximum product amounts without overflow", () => {
+    const amort = computeMonthlyAmortization(5_000_000, 14, 1_800)
+    expect(Number.isFinite(amort)).toBe(true)
+    expect(amort).toBeGreaterThan(0)
+  })
+
+  it("rounds currency additions to centavo precision (no float drift)", () => {
+    const totals = computeLoanTotals({
+      principal: 100_000,
+      annualRatePercent: 12,
+      termDays: 360,
+      notarialFee: 0.07,
+      docStampFee: 0.01,
+      insuranceFee: 0.02,
+      applicationChargeRate: 0,
+    })
+    // 0.07 + 0.01 + 0.02 must equal exactly 0.10, not 0.10000000000000001
+    expect(totals.totalUpfrontDeductions).toBe(0.1)
+    expect(totals.netProceeds).toBe(99_999.9)
+  })
+
+  it("caps exactly at the ATM hard cap boundary", () => {
+    // Capacity that would exceed C29's 100k cap lands exactly on the cap.
+    expect(computeMaximumLoanableAmount(50_000, 12, 360, "C29")).toBe(100_000)
+    // Capacity under the cap is denominated down to whole hundreds:
+    // 8,000 x annuity-factor(12%, 12 mo) = 90,040.8 -> 90,000.
+    expect(computeMaximumLoanableAmount(8_000, 12, 360, "C34")).toBe(90_000)
+  })
+
+  it("treats missing/invalid inputs as zero capacity, never NaN", () => {
+    expect(computeMaximumLoanableAmount(Number.NaN, 12, 360)).toBe(0)
+    const disposable = computeDisposableIncome(
+      { netTakeHomePay: Number.NaN, otherMonthlyObligations: Number.NaN },
+      5_000
+    )
+    expect(disposable.remainingDisposable).toBe(-5_000)
+    expect(disposable.isAmortizationExceedingIncome).toBe(true)
+  })
+
+  it("keeps the one-month boundary exclusive (29 days = no term)", () => {
+    expect(computeMonthlyAmortization(100_000, 12, 29)).toBe(0)
+    expect(computeMonthlyAmortization(100_000, 12, 30)).toBeGreaterThan(0)
+  })
+})
+
 describe("computeDisposableIncome", () => {
   it("flags amortization exceeding net take-home pay", () => {
     const result = computeDisposableIncome(

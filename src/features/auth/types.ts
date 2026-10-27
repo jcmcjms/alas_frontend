@@ -9,6 +9,15 @@ export const ROLES = [
 ] as const
 export type UserRole = (typeof ROLES)[number]
 
+/** Roles an administrator may assign (Admin itself is provisioned out-of-band). */
+export const ASSIGNABLE_ROLES = [
+  "Encoder",
+  "Recommender",
+  "Evaluator",
+  "Approver",
+] as const
+export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number]
+
 export const PERMISSIONS = {
   loansCreate: "loans.create",
   loansView: "loans.view",

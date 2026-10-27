@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { apiClient, buildQuery } from "@/lib/api/api-client"
 import { getErrorMessage } from "@/lib/api/api-error"
 import { queryKeys, type NotificationInboxParams } from "@/lib/query/keys"
+import { useSession } from "@/features/auth/session-context"
 
 export interface NotificationItem {
   id: string
@@ -42,8 +43,9 @@ async function fetchInbox(
  * real-time transport is a documented backend dependency, not claimed here.
  */
 export function useNotificationInbox(params: NotificationInboxParams) {
+  const { user } = useSession()
   return useQuery({
-    queryKey: queryKeys.notifications.inbox(params),
+    queryKey: queryKeys.notifications.inbox(user?.userId ?? "anonymous", params),
     queryFn: ({ signal }) => fetchInbox(params, signal),
     refetchInterval: 30_000,
     staleTime: 10_000,
@@ -52,8 +54,9 @@ export function useNotificationInbox(params: NotificationInboxParams) {
 
 /** Lightweight unread feed for the top-bar bell. */
 export function useBellNotifications(enabled = true) {
+  const { user } = useSession()
   return useQuery({
-    queryKey: queryKeys.notifications.inbox({
+    queryKey: queryKeys.notifications.inbox(user?.userId ?? "anonymous", {
       page: 1,
       pageSize: 5,
       status: "unread",
@@ -62,7 +65,7 @@ export function useBellNotifications(enabled = true) {
       fetchInbox({ page: 1, pageSize: 5, status: "unread" }, signal),
     refetchInterval: 30_000,
     staleTime: 10_000,
-    enabled,
+    enabled: enabled && Boolean(user),
   })
 }
 

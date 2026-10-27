@@ -90,11 +90,11 @@ export function useLoanCountByStatus(status: string, enabled = true) {
  * Desk queue: the officer's grouped bundles. Polls while visible so ownership
  * never goes stale (spec §7.7), and is invalidated by claim/release/decisions.
  */
-export function useDeskQueue(role: string | undefined) {
+export function useDeskQueue(userId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.loans.desk(role ?? "unknown"),
+    queryKey: queryKeys.loans.desk(userId ?? "anonymous"),
     queryFn: ({ signal }) => deskApi.queue(signal),
-    enabled: Boolean(role),
+    enabled: Boolean(userId),
     staleTime: 10_000,
     refetchInterval: 30_000,
   })

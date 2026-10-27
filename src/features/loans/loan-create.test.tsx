@@ -42,10 +42,10 @@ describe("loan creation", () => {
       screen.getByRole("button", { name: /add application/i })
     )
 
-    await app.user.click(
-      screen.getByRole("combobox", { name: /loan product/i })
+    await app.user.selectOptions(
+      screen.getByLabelText(/loan product/i),
+      "C34"
     )
-    await app.user.click(await screen.findByRole("option", { name: /c34/i }))
 
     await app.user.type(screen.getByLabelText(/^purpose/i), "Home renovation")
     await app.user.type(screen.getByLabelText(/loan amount/i), "150000")
@@ -101,10 +101,10 @@ describe("loan creation", () => {
       await screen.findByRole("button", { name: /add application/i })
     )
 
-    await app.user.click(
-      screen.getByRole("combobox", { name: /loan product/i })
+    await app.user.selectOptions(
+      screen.getByLabelText(/loan product/i),
+      "C34"
     )
-    await app.user.click(await screen.findByRole("option", { name: /c34/i }))
     await app.user.type(screen.getByLabelText(/^purpose/i), "Test")
     // 150,050 is inside the C34 range but violates the whole-hundreds rule.
     await app.user.type(screen.getByLabelText(/loan amount/i), "150050")
@@ -133,10 +133,10 @@ describe("loan creation", () => {
       await screen.findByRole("button", { name: /add application/i })
     )
 
-    await app.user.click(
-      screen.getByRole("combobox", { name: /loan product/i })
+    await app.user.selectOptions(
+      screen.getByLabelText(/loan product/i),
+      "C34"
     )
-    await app.user.click(await screen.findByRole("option", { name: /c34/i }))
     await app.user.type(
       screen.getByLabelText(/^purpose/i),
       "Debt consolidation"
@@ -155,11 +155,9 @@ describe("loan creation", () => {
     ).toBeInTheDocument()
 
     // Recording the deviation clears the block.
-    await app.user.click(
-      screen.getByRole("combobox", { name: /deviation reason/i })
-    )
-    await app.user.click(
-      await screen.findByRole("option", { name: /interest-rate reduction/i })
+    await app.user.selectOptions(
+      screen.getByLabelText(/deviation reason/i),
+      "RATE-01"
     )
     await app.user.type(
       screen.getByLabelText(/deviation justification/i),
@@ -183,10 +181,10 @@ describe("loan creation", () => {
     await app.user.click(
       await screen.findByRole("button", { name: /add application/i })
     )
-    await app.user.click(
-      screen.getByRole("combobox", { name: /loan product/i })
+    await app.user.selectOptions(
+      screen.getByLabelText(/loan product/i),
+      "C34"
     )
-    await app.user.click(await screen.findByRole("option", { name: /c34/i }))
     await app.user.type(screen.getByLabelText(/^purpose/i), "Home renovation")
     await app.user.type(screen.getByLabelText(/loan amount/i), "150000")
     await app.user.type(screen.getByLabelText(/term \(days\)/i), "360")
@@ -195,10 +193,8 @@ describe("loan creation", () => {
     await app.user.click(
       screen.getByRole("button", { name: /add another application/i })
     )
-    const editors = screen.getAllByRole("combobox", { name: /loan product/i })
-    await app.user.click(editors[editors.length - 1])
-    const options = await screen.findAllByRole("option", { name: /c27/i })
-    await app.user.click(options[options.length - 1])
+    const productFields = screen.getAllByLabelText(/loan product/i)
+    await app.user.selectOptions(productFields[productFields.length - 1], "C27")
     const purposes = screen.getAllByLabelText(/^purpose/i)
     await app.user.type(purposes[purposes.length - 1], "Tuition assistance")
     const amounts = screen.getAllByLabelText(/loan amount/i)

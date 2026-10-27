@@ -4,9 +4,15 @@ const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "")
 
 type TokenProvider = () => string | null
 type UnauthorizedHandler = (error: ApiError) => void
+/**
+ * Attempts a token refresh; resolves to the new access token, or null when
+ * the session cannot be restored (the caller then ends the session).
+ */
+type SessionRefreshHandler = () => Promise<string | null>
 
 let tokenProvider: TokenProvider = () => null
 let unauthorizedHandler: UnauthorizedHandler | null = null
+let refreshHandler: SessionRefreshHandler | null = null
 
 /** Registered once by the auth session provider; keeps the client decoupled. */
 export function setAuthTokenProvider(provider: TokenProvider): void {
@@ -20,11 +26,35 @@ export function setUnauthorizedHandler(
   unauthorizedHandler = handler
 }
 
+/** Registered once by the auth session provider to restore expired tokens. */
+export function setSessionRefreshHandler(
+  handler: SessionRefreshHandler | null
+): void {
+  refreshHandler = handler
+}
+
+/**
+ * Single-flight refresh: concurrent 401s share ONE refresh call so
+ * rotation-based backends never see competing refreshes revoking each other.
+ */
+let refreshInFlight: Promise<string | null> | null = null
+function refreshOnce(): Promise<string | null> {
+  if (!refreshInFlight) {
+    const run = refreshHandler ? refreshHandler() : Promise.resolve(null)
+    refreshInFlight = run.finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
+}
+
 export interface RequestOptions {
   signal?: AbortSignal
   headers?: Record<string, string>
   /** Abort the request after this many ms. Defaults to 30s. */
   timeoutMs?: number
+  /** Internal: marks the single automatic retry after a token refresh. */
+  isRetryAfterRefresh?: boolean
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000
@@ -110,8 +140,24 @@ async function request<T>(
       response.status,
       body as ProblemDetails | undefined
     )
-    // Auth endpoints manage their own 401s (login/refresh must not trigger the global handler).
+    // Auth endpoints manage their own 401s (login/refresh must not trigger
+    // the global handler or a refresh loop).
     if (apiError.isUnauthorized && !path.startsWith("/api/auth/")) {
+      // One transparent refresh-and-retry per request while a session exists:
+      // short-lived access tokens must not log officers out mid-work. The
+      // retry flag bounds replay to exactly one attempt (no retry storms).
+      // A 401 means the server did NOT execute the operation, so replaying
+      // even a mutation is safe at this point; business mutations themselves
+      // are never auto-retried on transport failures.
+      if (!options.isRetryAfterRefresh && refreshHandler && tokenProvider()) {
+        const newToken = await refreshOnce()
+        if (newToken) {
+          return request<T>(path, init, {
+            ...options,
+            isRetryAfterRefresh: true,
+          })
+        }
+      }
       unauthorizedHandler?.(apiError)
     }
     throw apiError
@@ -174,7 +220,12 @@ export const apiClient = {
     formData: FormData,
     options: RequestOptions = {}
   ): Promise<TResponse> {
-    return request<TResponse>(path, { method: "POST", body: formData }, options)
+    // Longer ceiling: multi-MB document scans on slow branch uplinks.
+    return request<TResponse>(
+      path,
+      { method: "POST", body: formData },
+      { timeoutMs: 120_000, ...options }
+    )
   },
 }
 

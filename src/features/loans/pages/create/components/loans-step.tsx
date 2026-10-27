@@ -17,13 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -262,44 +256,32 @@ function LineEditor({
                 *
               </span>
             </Label>
-            <Select
+            <NativeSelect
+              id={`loans.${index}.productCode`}
+              className="w-full"
               value={productCode}
-              onValueChange={(value) => {
+              aria-invalid={Boolean(errorAt("productCode"))}
+              onChange={(event) => {
+                const value = event.target.value
                 form.setValue(`loans.${index}.productCode`, value, {
                   shouldValidate: true,
                   shouldDirty: true,
                 })
-                const next = products.find(
-                  (candidate) => candidate.code === value
-                )
-                if (
-                  next &&
-                  !Number.isFinite(
-                    form.getValues(`loans.${index}.annualRatePercent`)
-                  )
-                ) {
-                  form.setValue(
-                    `loans.${index}.annualRatePercent`,
-                    next.defaultAnnualRatePercent,
-                    { shouldDirty: true }
-                  )
+                const next = products.find((candidate) => candidate.code === value)
+                if (next && !Number.isFinite(form.getValues(`loans.${index}.annualRatePercent`))) {
+                  form.setValue(`loans.${index}.annualRatePercent`, next.defaultAnnualRatePercent, {
+                    shouldDirty: true,
+                  })
                 }
               }}
             >
-              <SelectTrigger
-                id={`loans.${index}.productCode`}
-                aria-invalid={Boolean(errorAt("productCode"))}
-              >
-                <SelectValue placeholder="Select product" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((option) => (
-                  <SelectItem key={option.code} value={option.code}>
-                    {option.code} — {option.description}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <NativeSelectOption value="">Select product…</NativeSelectOption>
+              {products.map((option) => (
+                <NativeSelectOption key={option.code} value={option.code}>
+                  {option.code} — {option.description}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
             {product ? (
               <p className="text-xs text-muted-foreground">
                 ₱{product.minAmount.toLocaleString()}–₱
@@ -474,19 +456,19 @@ function LineEditor({
           ) : null}
 
           <div className="mt-2 space-y-2">
-            <Select value={pendingCode} onValueChange={setPendingCode}>
-              <SelectTrigger aria-label="Deviation reason">
-                <SelectValue placeholder="Select deviation reason" />
-              </SelectTrigger>
-              <SelectContent>
-                {catalog.map((entry) => (
-                  <SelectItem key={entry.code} value={entry.code}>
-                    <span className="font-mono text-xs">{entry.code}</span> —{" "}
-                    {entry.reasonText}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NativeSelect
+              className="w-full"
+              value={pendingCode}
+              aria-label="Deviation reason"
+              onChange={(event) => setPendingCode(event.target.value)}
+            >
+              <NativeSelectOption value="">Select deviation reason…</NativeSelectOption>
+              {catalog.map((entry) => (
+                <NativeSelectOption key={entry.code} value={entry.code}>
+                  {entry.code} — {entry.reasonText}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
             <Textarea
               value={pendingJustification}
               onChange={(event) => setPendingJustification(event.target.value)}

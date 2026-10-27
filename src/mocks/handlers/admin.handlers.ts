@@ -440,28 +440,21 @@ export const adminHandlers = [
     > | null
     if (!body)
       return problem(400, "Validation failed", "A request body is required.")
-    const editable = [
-      "description",
-      "minAmount",
-      "maxAmount",
-      "minTermDays",
-      "maxTermDays",
-      "notarialFee",
-      "docStampFee",
-      "insuranceFee",
-      "advanceInterestRate",
-      "applicationChargeRate",
-      "amortizationMode",
-      "chargeAdvanceInterest",
-      "isRetired",
-      "defaultAnnualRatePercent",
-    ] as const
-    for (const key of editable) {
-      if (body[key] !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(product as any)[key] = body[key]
-      }
-    }
+    // Explicit, type-checked field patching (no dynamic casts).
+    if (typeof body.description === "string" && body.description.trim()) product.description = body.description.trim()
+    if (typeof body.minAmount === "number" && body.minAmount > 0) product.minAmount = body.minAmount
+    if (typeof body.maxAmount === "number" && body.maxAmount > product.minAmount) product.maxAmount = body.maxAmount
+    if (typeof body.minTermDays === "number" && body.minTermDays >= 30) product.minTermDays = body.minTermDays
+    if (typeof body.maxTermDays === "number" && body.maxTermDays > product.minTermDays) product.maxTermDays = body.maxTermDays
+    if (typeof body.notarialFee === "number" && body.notarialFee >= 0) product.notarialFee = body.notarialFee
+    if (typeof body.docStampFee === "number" && body.docStampFee >= 0) product.docStampFee = body.docStampFee
+    if (typeof body.insuranceFee === "number" && body.insuranceFee >= 0) product.insuranceFee = body.insuranceFee
+    if (typeof body.advanceInterestRate === "number" && body.advanceInterestRate >= 0) product.advanceInterestRate = body.advanceInterestRate
+    if (typeof body.applicationChargeRate === "number" && body.applicationChargeRate >= 0) product.applicationChargeRate = body.applicationChargeRate
+    if (typeof body.amortizationMode === "string" && body.amortizationMode) product.amortizationMode = body.amortizationMode
+    if (typeof body.chargeAdvanceInterest === "boolean") product.chargeAdvanceInterest = body.chargeAdvanceInterest
+    if (typeof body.isRetired === "boolean") product.isRetired = body.isRetired
+    if (typeof body.defaultAnnualRatePercent === "number" && body.defaultAnnualRatePercent >= 0) product.defaultAnnualRatePercent = body.defaultAnnualRatePercent
     product.lastSyncedAt = new Date().toISOString()
     return noStoreJson(product)
   }),

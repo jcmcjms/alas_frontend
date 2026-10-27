@@ -92,11 +92,13 @@ export function LoanDetailPage() {
   }
 
   const isCreator = loan.createdById === user?.userId
+  // Corrections are permission-gated (legacy behavior): any officer with
+  // loans.revise may correct a returned application — branches cover for
+  // absent encoders. Cancellation remains creator-only.
   const canCorrect =
     (loan.status === "ForRevision" ||
       loan.status === "ForIncompleteDocuments") &&
-    hasPermission(PERMISSIONS.loansRevise) &&
-    (isCreator || user?.role === "Admin")
+    hasPermission(PERMISSIONS.loansRevise)
   const canCancel =
     isLoanStatus(loan.status) &&
     CANCELLABLE_STATUSES.includes(loan.status) &&

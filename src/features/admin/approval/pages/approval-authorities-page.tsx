@@ -137,7 +137,7 @@ function AuthorityCard({ authority }: { authority: ApprovalAuthority }) {
               <SelectTrigger id={`severity-${authority.key}`}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 {([0, 1, 2] as const).map((level) => (
                   <SelectItem key={level} value={String(level)}>
                     {SEVERITY_LABELS[level]}

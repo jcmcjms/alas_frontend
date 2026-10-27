@@ -413,9 +413,11 @@ export function AppShell() {
           <ThemeToggle />
           <UserMenu />
         </header>
-        <main id="main-content" className="min-w-0 flex-1">
+        {/* SidebarInset already renders the page <main> landmark; this inner
+            region is the skip-link target and must not be a second <main>. */}
+        <div id="main-content" tabIndex={-1} className="min-w-0 flex-1 outline-none">
           <Outlet />
-        </main>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   )

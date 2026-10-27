@@ -13,7 +13,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "dev:e2e": "vite optimize --force && vite --port 5173 --strictPort",
+    "build:e2e": "vite build --mode development",
+    "preview:e2e": "vite preview --port 5173 --strictPort"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

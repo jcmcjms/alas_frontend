@@ -1,0 +1,91 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the pipeline only reads the repository.
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Typecheck · Lint · Test · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm 10.x ships an arborist build that crashes on this dependency tree
+      # ("Cannot read properties of null (reading 'edgesOut')"); npm 11 fixes it.
+      - name: Use npm 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit + integration tests (with coverage)
+        run: npm run test:coverage
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify production bundle is mock-free
+        run: |
+          if grep -rl "mockServiceWorker\|__alasMock\|Passw0rd" dist/; then
+            echo "Production bundle contains mock artifacts" >&2
+            exit 1
+          fi
+          echo "Production bundle is mock-free"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Use npm 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: Install browsers (chromium + firefox)
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Run E2E (built app + mock API)
+        run: npm run test:e2e
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

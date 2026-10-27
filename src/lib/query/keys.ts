@@ -38,7 +38,9 @@ export const queryKeys = {
 
   dashboard: {
     all: ["dashboard"] as const,
-    overview: (role: string) => ["dashboard", "overview", role] as const,
+    // Keyed by identity: overview content is user-specific (defense-in-depth
+    // on top of the cache clear performed at session end).
+    overview: (userId: string) => ["dashboard", "overview", userId] as const,
   },
 
   loans: {
@@ -53,7 +55,7 @@ export const queryKeys = {
     revisionRequests: (id: string) =>
       ["loans", "revision-requests", id] as const,
     signatureChain: (id: string) => ["loans", "signature-chain", id] as const,
-    desk: (role: string) => ["loans", "desk", role] as const,
+    desk: (userId: string) => ["loans", "desk", userId] as const,
     countByStatus: (status: string) => ["loans", "count", status] as const,
     disbursement: (filter: string) =>
       ["loans", "disbursement", filter] as const,
@@ -69,8 +71,8 @@ export const queryKeys = {
 
   notifications: {
     all: ["notifications"] as const,
-    inbox: (params: NotificationInboxParams) =>
-      ["notifications", "inbox", params] as const,
+    inbox: (userId: string, params: NotificationInboxParams) =>
+      ["notifications", "inbox", userId, params] as const,
   },
 
   admin: {

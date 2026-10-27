@@ -452,7 +452,12 @@ export function LoanCreatePage() {
         ) : null}
 
         <div className="mt-5 flex items-center justify-between border-t pt-4">
+          {/* Keys remount the footer buttons per step: without them React
+              reuses the same DOM node, so a mouseup from a "Continue" click
+              can land on the node after it became "Submit" — an accidental
+              premature submission (a real double-click hazard as well). */}
           <Button
+            key={`back-${step}`}
             type="button"
             variant="outline"
             size="sm"
@@ -462,11 +467,17 @@ export function LoanCreatePage() {
             Back
           </Button>
           {step < 3 ? (
-            <Button type="button" size="sm" onClick={() => void nextStep()}>
+            <Button
+              key={`next-${step}`}
+              type="button"
+              size="sm"
+              onClick={() => void nextStep()}
+            >
               Continue
             </Button>
           ) : (
             <Button
+              key="submit"
               type="submit"
               size="sm"
               className="gap-1.5"

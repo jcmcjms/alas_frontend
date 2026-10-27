@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query"
 
 import {
   setAuthTokenProvider,
+  setSessionRefreshHandler,
   setUnauthorizedHandler,
 } from "@/lib/api/api-client"
 import { ApiError } from "@/lib/api/api-error"
@@ -131,25 +132,51 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, [applyToken])
 
-  // Wire the API client to the in-memory token and to expiry handling.
+  const endSession = useCallback(() => {
+    tokenRef.current = null
+    userIdRef.current = null
+    setUser(null)
+    setStatus("unauthenticated")
+    setSessionExpired(true)
+    resetRestoreSession()
+    void queryClient.cancelQueries().then(() => queryClient.clear())
+  }, [queryClient])
+
+  // Wire the API client to the in-memory token, to refresh, and to expiry.
   useEffect(() => {
     setAuthTokenProvider(() => tokenRef.current)
+    setSessionRefreshHandler(async () => {
+      // Only meaningful while a session exists to extend.
+      if (!tokenRef.current) return null
+      try {
+        const response = await refreshSession()
+        const claims = extractUserFromToken(response.accessToken)
+        if (!claims) return null
+        // A refresh must never restore a superseded identity: if the session
+        // was ended or replaced while the refresh was in flight, drop it.
+        if (!userIdRef.current || userIdRef.current !== claims.sub) return null
+        tokenRef.current = response.accessToken
+        setUser((current) =>
+          current && current.userId === claims.sub
+            ? toSessionUser(claims, response.mustChangePassword)
+            : current
+        )
+        return response.accessToken
+      } catch {
+        return null
+      }
+    })
     setUnauthorizedHandler((error: ApiError) => {
       if (error.isUnauthorized && tokenRef.current) {
-        tokenRef.current = null
-        userIdRef.current = null
-        setUser(null)
-        setStatus("unauthenticated")
-        setSessionExpired(true)
-        resetRestoreSession()
-        void queryClient.cancelQueries().then(() => queryClient.clear())
+        endSession()
       }
     })
     return () => {
       setAuthTokenProvider(() => null)
+      setSessionRefreshHandler(null)
       setUnauthorizedHandler(null)
     }
-  }, [queryClient])
+  }, [endSession])
 
   const login = useCallback(
     async (username: string, password: string): Promise<SessionUser> => {

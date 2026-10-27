@@ -38,7 +38,9 @@ in production builds.
 | `npm run format` | Prettier (+ tailwind plugin) |
 | `npm test` | Vitest unit + integration suites (MSW, jsdom) |
 | `npm run test:coverage` | Vitest with v8 coverage |
-| `npm run test:e2e` | Playwright E2E (requires `npx playwright install chromium`) |
+| `npm run build:e2e` | Dev-mode production-shaped build for E2E (mocks enabled) |
+| `npm run preview:e2e` | Serve the E2E artifact on :5173 |
+| `npm run test:e2e` | Playwright E2E against the built app (chromium + firefox projects) |
 
 ## 3. Environment variables
 

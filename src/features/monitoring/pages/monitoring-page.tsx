@@ -65,6 +65,15 @@ export function MonitoringPage() {
   const [searchInput, setSearchInput] = useState(search)
   const debouncedSearch = useDebouncedValue(searchInput, 350)
 
+  // The URL is the source of truth: when it changes externally (browser
+  // back/forward, deep links), re-sync the input. Render-time state
+  // adjustment — no effect, no cascading renders.
+  const [lastUrlSearch, setLastUrlSearch] = useState(search)
+  if (lastUrlSearch !== search) {
+    setLastUrlSearch(search)
+    if (search !== searchInput) setSearchInput(search)
+  }
+
   // Commit debounced search to the URL (and reset the page) when it settles.
   useEffect(() => {
     if (debouncedSearch === search) return
@@ -161,7 +170,7 @@ export function MonitoringPage() {
               <SelectTrigger id="monitoring-status">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 <SelectItem value="all">All statuses</SelectItem>
                 {STATUS_FILTER_ORDER.map((entry) => (
                   <SelectItem key={entry} value={entry}>

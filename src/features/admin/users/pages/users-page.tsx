@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { LoaderCircleIcon, ShieldXIcon, UserPlusIcon } from "lucide-react"
 
-import { ROLES, type UserRole } from "@/features/auth/types"
+import {
+  ASSIGNABLE_ROLES,
+  type AssignableRole,
+} from "@/features/auth/types"
 import {
   useCreateUser,
   useToggleUserStatus,
@@ -62,10 +65,7 @@ const userSchema = z.object({
   phone: z.string().trim().max(30).optional().or(z.literal("")),
   jobTitle: z.string().trim().max(80).optional().or(z.literal("")),
   branchCode: z.string().min(1, "Select a branch."),
-  role: z.enum(
-    ROLES.filter((role) => role !== "Admin") as
-      [UserRole, ...UserRole[]] | never
-  ),
+  role: z.enum(ASSIGNABLE_ROLES),
 })
 
 type UserFormValues = z.infer<typeof userSchema>
@@ -353,7 +353,7 @@ function UserDialog({
   const mutation = isNew ? createUser : updateUser
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema) as never,
+    resolver: zodResolver(userSchema),
     values: existing
       ? {
           username: existing.username,
@@ -365,7 +365,10 @@ function UserDialog({
           phone: existing.phone ?? "",
           jobTitle: existing.jobTitle ?? "",
           branchCode: existing.branchCode,
-          role: existing.role === "Admin" ? "Encoder" : existing.role,
+          // Admin accounts are provisioned out-of-band; show a safe default.
+          role: (ASSIGNABLE_ROLES as readonly string[]).includes(existing.role)
+            ? (existing.role as UserFormValues["role"])
+            : "Encoder",
         }
       : {
           username: "",
@@ -377,7 +380,7 @@ function UserDialog({
           phone: "",
           jobTitle: "",
           branchCode: "",
-          role: "Encoder" as UserRole as UserFormValues["role"],
+          role: "Encoder",
         },
   })
 
@@ -510,7 +513,7 @@ function UserDialog({
                 <SelectTrigger id="branchCode">
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   {branchOptions.map((branch) => (
                     <SelectItem key={branch.code} value={branch.code}>
                       {branch.code} — {branch.name}
@@ -529,7 +532,7 @@ function UserDialog({
               <Select
                 value={form.watch("role")}
                 onValueChange={(value) =>
-                  form.setValue("role", value as UserRole, {
+                  form.setValue("role", value as AssignableRole, {
                     shouldValidate: true,
                   })
                 }
@@ -537,8 +540,8 @@ function UserDialog({
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
-                <SelectContent>
-                  {ROLES.filter((role) => role !== "Admin").map((role) => (
+                <SelectContent position="popper">
+                  {ASSIGNABLE_ROLES.map((role) => (
                     <SelectItem key={role} value={role}>
                       {role}
                     </SelectItem>

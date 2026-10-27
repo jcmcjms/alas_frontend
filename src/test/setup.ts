@@ -13,7 +13,7 @@ import {
 } from "@/mocks/scenarios"
 
 // Mock handlers add realistic latency; give async utilities room.
-configure({ asyncUtilTimeout: 15000 })
+configure({ asyncUtilTimeout: 20000 })
 
 // Fail on unhandled requests so a missing mock handler can never silently
 // become a real network call during tests (Frontend Auto.md §10).

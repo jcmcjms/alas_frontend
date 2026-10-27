@@ -48,9 +48,8 @@ v20.20.2, npm 11.21.1 (upgraded in-sandbox from 10.8.2), 2 CPU cores, no GPU.
 
 ## 3. Checks NOT executed (and why)
 
-- **Playwright E2E execution.** Specs for the 11 required journeys exist in
-  `e2e/` (2 files, 9 tests; journeys 2/7 and 3/4 share flows). Chromium and
-  its system libraries installed, but **this sandbox blocks Chromium renderer
+- **Playwright E2E execution on Chromium in this sandbox.** Chromium and its
+  system libraries installed, but **this sandbox blocks Chromium renderer
   processes**: `chrome-headless-shell` and full Chromium both fail with
   `Target crashed` at `browserContext.newPage` (multi-process), and
   `--single-process` deadlocks page creation; headed mode under Xvfb crashes
@@ -85,11 +84,26 @@ v20.20.2, npm 11.21.1 (upgraded in-sandbox from 10.8.2), 2 CPU cores, no GPU.
 3. **In-memory mock sessions**: reload during dev requires re-login (the
    production refresh-cookie contract is documented; frontend code already
    calls `/api/auth/refresh` on boot so the real backend works unchanged).
-4. **E2E specs are unexecuted in this environment** (see §3) — treat them as
-   ready-to-run, not proven.
-5. **Flakiness note**: two integration assertions needed extended timeouts on
+   E2E now asserts this documented behavior explicitly.
+4. **E2E specs ARE executed in this environment — on Firefox** (Chromium is
+   renderer-blocked here; CI runs Chromium + Firefox). Recorded run, built
+   app (`npm run build:e2e` + `vite preview`), Firefox headless:
+   **11/11 tests passed** (10 first-try, 1 environmental retry: first-document
+   reload-loop flake, see AUDIT A-21). Journeys covered: full pipeline
+   create→recommend→evaluate→approve→disbursement window; return/correct/
+   resubmit; workflow-config change without in-flight rerouting + new-submit
+   routing; failed mutation data preservation; grouped bundle claim/release;
+   account update after server confirmation; session-change cache isolation;
+   disbursement board overdue/voided; deep-link-before-auth; reload
+   re-authentication; void refusal inside the window.
+5. **Coverage (recorded, vitest v8 provider, this environment):**
+   statements 65.78 %, branches 61.82 %, functions 66.04 %, lines 68.01 %
+   across `src/` (119 tests, 17 files, all passing). No arbitrary gate is
+   enforced; coverage exists to expose untested paths, and the critical
+   workflow/auth/computation modules are the best-covered areas.
+6. **Flakiness note**: two integration assertions needed extended timeouts on
    the 2-core sandbox (lazy-chunk load under contention). Suite is configured
-   serial (`maxWorkers: 1`, 45 s test timeout) and the last recorded full run
+   serial (`maxWorkers: 1`, 45 s test timeout, RTL async util 20 s) and the last recorded full run
    is green; on larger CI machines parallelism can be re-enabled.
 6. **Voiding UX for overdue loans** lives on the approval screen and the
    disbursement board; there is no bulk-void operation (the backend contract

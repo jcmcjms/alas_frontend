@@ -158,10 +158,14 @@ mock contract that the real API must confirm or replace:
 8. **HTTP caching** — mocks send `Cache-Control: no-store` on account/loan
    responses; the real API must set equivalent headers (frontend cache
    invalidation cannot fix server/proxy caching).
-9. **Refresh-cookie session restore** — the production contract is expected to
-   authenticate `POST /api/auth/refresh` with an HttpOnly cookie; the mock
-   cannot set cookies from a service worker, so mock sessions are in-memory
-   (reload → sign in again).
+9. **Refresh-cookie session restore** — the production contract authenticates
+   `POST /api/auth/refresh` with an HttpOnly cookie; the mock cannot observe
+   request cookies from a service worker (and Firefox rejects HttpOnly
+   Set-Cookie on SW-synthesized responses), so the mock rotates the refresh
+   credential on the Bearer token and keeps sessions in-memory
+   (reload → sign in again; asserted by E2E). The dev bootstrap registers the
+   worker with `updateViaCache: "all"` because Firefox otherwise re-checks the
+   worker script on every navigation and can stall reloads in dev.
 10. **Approval-authority tier matching** (severity/exposure thresholds,
     assignment order) is mirrored from the legacy routing response; the
     backend routing engine remains the source of truth.

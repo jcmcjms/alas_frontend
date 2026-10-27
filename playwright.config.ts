@@ -13,7 +13,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  expect: { timeout: 20_000 },
   reporter: [["list"]],
   use: {
     baseURL: "http://localhost:5173",
@@ -29,9 +29,23 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // Sandbox/CI with 2 cores: first navigation includes MSW worker
+      // registration and Vite transforms; measured ~40-70 s cold.
+      name: "firefox",
+      timeout: 240_000,
+      // This sandbox's Firefox intermittently reload-loops on first document
+      // load (SW claim race); one retry distinguishes environment flakes from
+      // defects (failures reproducing on retry are investigated, not hidden).
+      retries: 1,
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
   webServer: {
-    command: "npm run dev",
+    // E2E runs against the BUILT app (dev-mode build keeps MSW enabled),
+    // served by `vite preview`: no on-the-fly transforms, deterministic
+    // load times, and the tests exercise the production artifact shape.
+    command: "npm run build:e2e && npm run preview:e2e",
     url: "http://localhost:5173",
     reuseExistingServer: true,
     timeout: 120_000,

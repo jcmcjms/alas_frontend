@@ -38,12 +38,12 @@ export interface DashboardOverview {
   workflow: { requireRecommendation: boolean }
 }
 
-export function useDashboardOverview(role: string | undefined) {
+export function useDashboardOverview(userId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.dashboard.overview(role ?? "anonymous"),
+    queryKey: queryKeys.dashboard.overview(userId ?? "anonymous"),
     queryFn: ({ signal }) =>
       apiClient.get<DashboardOverview>("/api/dashboard/overview", { signal }),
-    enabled: Boolean(role),
+    enabled: Boolean(userId),
     staleTime: 15_000,
     refetchInterval: 60_000,
   })

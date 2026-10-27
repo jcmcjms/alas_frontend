@@ -30,13 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { PageHeader } from "@/components/shared/page-header"
@@ -554,19 +548,19 @@ export function LoanRevisePage() {
                 </ul>
               )}
               <div className="space-y-2">
-                <Select value={pendingCode} onValueChange={setPendingCode}>
-                  <SelectTrigger aria-label="Deviation reason">
-                    <SelectValue placeholder="Add a deviation…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(catalog.data?.items ?? []).map((entry) => (
-                      <SelectItem key={entry.code} value={entry.code}>
-                        <span className="font-mono text-xs">{entry.code}</span>{" "}
-                        — {entry.reasonText}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect
+                  className="w-full"
+                  value={pendingCode}
+                  aria-label="Deviation reason"
+                  onChange={(event) => setPendingCode(event.target.value)}
+                >
+                  <NativeSelectOption value="">Add a deviation…</NativeSelectOption>
+                  {(catalog.data?.items ?? []).map((entry) => (
+                    <NativeSelectOption key={entry.code} value={entry.code}>
+                      {entry.code} — {entry.reasonText}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
                 <Textarea
                   value={pendingJustification}
                   onChange={(event) =>

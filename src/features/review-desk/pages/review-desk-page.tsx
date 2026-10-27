@@ -48,7 +48,7 @@ import { StatusBadge } from "@/components/shared/status-badge"
 export function ReviewDeskPage() {
   const { user } = useSession()
   const now = useNow(30_000)
-  const desk = useDeskQueue(user?.role)
+  const desk = useDeskQueue(user?.userId)
   const claimNext = useClaimNext()
   const claimByLoan = useClaimByLoan()
   const release = useReleaseClaim()

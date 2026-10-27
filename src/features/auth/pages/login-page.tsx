@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { useSession } from "@/features/auth/session-context"
+import { MOCK_MODE_ENABLED } from "@/lib/env"
 import { getErrorMessage } from "@/lib/api/api-error"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -30,8 +31,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-const mocksEnabled =
-  import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_API === "true"
+const mocksEnabled = MOCK_MODE_ENABLED
 
 const DEMO_ACCOUNTS = [
   { role: "Encoder", username: "encoder" },

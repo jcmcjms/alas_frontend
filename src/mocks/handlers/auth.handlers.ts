@@ -1,10 +1,20 @@
 import { delay, http, HttpResponse } from "msw"
 import { db, daysFromNow, findUser, userName } from "../db"
-import { problem } from "../handler-utils"
+import { problem, resolveActor } from "../handler-utils"
 import { consumeExpiredSession, getMockScenario } from "../scenarios"
 import type { MockUserRecord } from "../fixtures/base-data"
 
 const TOKEN_TTL_MS = 60 * 60 * 1000
+/**
+ * Refresh credential for the mock. NOTE: a service worker cannot observe
+ * request cookies (the browser applies them after the SW responds) and
+ * Firefox rejects HttpOnly Set-Cookie on SW-synthesized responses, so the
+ * mock rotates on the Bearer token instead. The PRODUCTION contract remains
+ * an HttpOnly refresh cookie set by ASP.NET Core (docs/WORKFLOW.md section 8):
+ * same request/response shape, same single-flight client behavior. A reload
+ * in mock mode therefore requires signing in again — by design, never via
+ * insecure persistence.
+ */
 
 function b64url(value: unknown): string {
   return btoa(JSON.stringify(value))
@@ -84,11 +94,16 @@ export const authHandlers = [
     )
   }),
 
-  // Session restore. The real backend authenticates this with an HttpOnly
-  // refresh cookie; the mock accepts the current access token. A reload in
-  // mock mode therefore returns 401 (in-memory session), which exercises the
-  // expired-session path exactly like the production contract would.
-  http.post("*/api/auth/refresh", async () => {
+  /**
+   * Session restore / token rotation.
+   *
+   * Production contract (documented, pending backend): an HttpOnly refresh
+   * cookie authenticates this call. The mock cannot set cookies from a
+   * service worker, so it rotates on a still-valid Bearer token instead —
+   * same request/response shape, same single-flight client behavior. A
+   * missing, revoked or expired token yields 401 and the session ends.
+   */
+  http.post("*/api/auth/refresh", async ({ request }) => {
     await delay(120)
     if (getMockScenario() === "expired-session" && consumeExpiredSession()) {
       return problem(
@@ -97,11 +112,25 @@ export const authHandlers = [
         "Your session has expired. Please sign in again."
       )
     }
-    // Without a token to rotate there is no session to restore.
-    return problem(
-      401,
-      "Session expired",
-      "Your session has expired. Please sign in again."
+    const actor = resolveActor(request)
+    if (!actor) {
+      return problem(
+        401,
+        "Session expired",
+        "Your session has expired. Please sign in again."
+      )
+    }
+    if (!actor.isActive) {
+      return problem(
+        401,
+        "Session expired",
+        "This account is suspended. Contact your administrator."
+      )
+    }
+    const issued = issueToken(actor)
+    return HttpResponse.json(
+      { ...issued, mustChangePassword: actor.mustChangePassword },
+      { headers: { "Cache-Control": "no-store" } }
     )
   }),
 

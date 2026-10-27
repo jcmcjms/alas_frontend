@@ -34,15 +34,11 @@ describe("query key registry", () => {
     expect(detail[0]).toBe(queryKeys.loans.all[0])
   })
 
-  it("separates desks per role so invalidation can target one desk", () => {
-    expect(queryKeys.loans.desk("Evaluator")).not.toEqual(
-      queryKeys.loans.desk("Approver")
+  it("separates desks per officer identity so invalidation can target one desk", () => {
+    expect(queryKeys.loans.desk("eval-01")).not.toEqual(
+      queryKeys.loans.desk("app-01")
     )
-    expect(queryKeys.loans.desk("Evaluator")).toEqual([
-      "loans",
-      "desk",
-      "Evaluator",
-    ])
+    expect(queryKeys.loans.desk("eval-01")).toEqual(["loans", "desk", "eval-01"])
   })
 
   it("keeps account, workflow and notification namespaces distinct", () => {
@@ -52,11 +48,25 @@ describe("query key registry", () => {
     expect(queryKeys.dashboard.all[0]).toBe("dashboard")
   })
 
-  it("versions notification inbox keys by filter", () => {
+  it("versions notification inbox keys by identity and filter", () => {
     expect(
-      queryKeys.notifications.inbox({ page: 1, pageSize: 5, status: "unread" })
+      queryKeys.notifications.inbox("enc-01", {
+        page: 1,
+        pageSize: 5,
+        status: "unread",
+      })
     ).not.toEqual(
-      queryKeys.notifications.inbox({ page: 1, pageSize: 5, status: "all" })
+      queryKeys.notifications.inbox("enc-01", {
+        page: 1,
+        pageSize: 5,
+        status: "all",
+      })
+    )
+    // Different users never share an inbox cache entry.
+    expect(
+      queryKeys.notifications.inbox("enc-01", { page: 1, pageSize: 5, status: "all" })
+    ).not.toEqual(
+      queryKeys.notifications.inbox("enc-02", { page: 1, pageSize: 5, status: "all" })
     )
   })
 

@@ -9,9 +9,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { MockScenario } from "@/mocks/scenarios"
+import { MOCK_MODE_ENABLED } from "@/lib/env"
 
-const isMockEnabled =
-  import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_API === "true"
+const isMockEnabled = MOCK_MODE_ENABLED
 
 /**
  * Development-only mock scenario switcher. Rendered only when the MSW mock is
@@ -53,7 +53,7 @@ export function DevScenarioSwitcher() {
         >
           <SelectValue placeholder="Scenario" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent position="popper">
           {scenarios.map((scenario) => (
             <SelectItem key={scenario} value={scenario} className="text-xs">
               {scenario}

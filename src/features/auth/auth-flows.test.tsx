@@ -160,4 +160,104 @@ describe("session lifecycle & cache isolation", () => {
       /session expired/i
     )
   })
+
+  it("transparently retries once after a single-flight token refresh", async () => {
+    const app = renderApp("/login")
+    await signInAs(app.user, "encoder")
+    app.router.navigate("/account")
+    await screen.findByText("ana.reyes@alas.mock")
+
+    // The access token expires server-side: the NEXT call 401s once, then the
+    // client must refresh (single flight) and replay — no session loss.
+    const { server } = await import("@/mocks/server")
+    const { http, HttpResponse } = await import("msw")
+    let forced = false
+    server.use(
+      http.get("*/api/account/me", () => {
+        if (!forced) {
+          forced = true
+          return HttpResponse.json(
+            { title: "Unauthorized", detail: "Access token expired." },
+            { status: 401 }
+          )
+        }
+        return undefined // fall through to the real handler on replay
+      })
+    )
+
+    // A refetch survives the 401 without landing on the login screen.
+    await app.queryClient.refetchQueries({ queryKey: ["account", "profile"] })
+    await waitFor(() =>
+      expect(screen.getByText("ana.reyes@alas.mock")).toBeInTheDocument()
+    )
+    expect(
+      screen.queryByRole("heading", { name: "Sign in" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("ends the session when BOTH access and refresh are rejected", async () => {
+    const app = renderApp("/login")
+    await signInAs(app.user, "encoder")
+
+    const { server } = await import("@/mocks/server")
+    const { http, HttpResponse } = await import("msw")
+    server.use(
+      http.post("*/api/auth/refresh", () =>
+        HttpResponse.json({ title: "Session expired" }, { status: 401 })
+      )
+    )
+
+    const { apiClient, setAuthTokenProvider } =
+      await import("@/lib/api/api-client")
+    setAuthTokenProvider(() => "revoked-token")
+    await expect(apiClient.get("/api/account/me")).rejects.toMatchObject({
+      status: 401,
+    })
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Sign in" })
+      ).toBeInTheDocument()
+    )
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /session expired/i
+    )
+  })
+
+  it("identity switch with a request in flight never surfaces the old user's data", async () => {
+    const app = renderApp("/login")
+    await signInAs(app.user, "encoder")
+
+    // Slow responses so the profile request is still in flight at logout.
+    const { setMockScenario } = await import("@/mocks/scenarios")
+    setMockScenario("slow")
+    app.router.navigate("/account")
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    // Log out mid-flight: in-flight queries are cancelled, cache cleared.
+    await app.user.click(screen.getByRole("button", { name: /account menu/i }))
+    await app.user.click(
+      await screen.findByRole("menuitem", { name: /sign out/i })
+    )
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument()
+    )
+    setMockScenario("default")
+
+    // Second user signs in; the first user's data must never render, and the
+    // late in-flight response cannot repopulate the cleared cache.
+    await signInAs(app.user, "evaluator")
+    app.router.navigate("/account")
+    expect(await screen.findByText("maria.domingo@alas.mock")).toBeInTheDocument()
+    expect(screen.queryByText("ana.reyes@alas.mock")).not.toBeInTheDocument()
+    // The cache holds ONLY the second user's profile — the cancelled in-flight
+    // response for user A never landed.
+    await waitFor(() => {
+      const cached = app.queryClient.getQueryData<{ email: string }>([
+        "account",
+        "profile",
+      ])
+      expect(cached?.email).toBe("maria.domingo@alas.mock")
+    })
+  })
 })
