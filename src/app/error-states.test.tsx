@@ -16,7 +16,7 @@ describe("application error states", () => {
     const app = renderApp("/login")
     setMockScenario("network-error")
 
-    await screen.findByRole("heading", { name: "Sign in" })
+    await screen.findByRole("heading", { name: "Welcome back" })
     await app.user.type(screen.getByLabelText("Username"), "encoder")
     await app.user.type(screen.getByLabelText(/^Password/), "Passw0rd!")
     await app.user.click(screen.getByRole("button", { name: /sign in/i }))

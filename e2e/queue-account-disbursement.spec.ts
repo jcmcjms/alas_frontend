@@ -198,7 +198,7 @@ test("full reload in mock mode requires re-authentication", async ({ page }) => 
   await signIn(page, "encoder")
   await expect(page.getByRole("link", { name: /new application/i })).toBeVisible()
   await page.reload({ waitUntil: "domcontentloaded" })
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible()
 })
 
 /**

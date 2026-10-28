@@ -63,7 +63,7 @@ export async function signInAs(
   password = DEMO_PASSWORD
 ) {
   await waitFor(() =>
-    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument()
   )
   await user.type(screen.getByLabelText("Username"), username)
   await user.type(screen.getByLabelText(/^Password/), password)
@@ -71,7 +71,7 @@ export async function signInAs(
   await waitFor(
     () => {
       expect(
-        screen.queryByRole("heading", { name: "Sign in" })
+        screen.queryByRole("heading", { name: "Welcome back" })
       ).not.toBeInTheDocument()
     },
     { timeout: 5000 }

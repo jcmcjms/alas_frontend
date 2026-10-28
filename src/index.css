@@ -117,6 +117,45 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ---------------------------------------------------------------------------
+   Login brand panel — Enterprise Bank authentication screen.
+   Values sampled from the bank's own artwork (public/EBI_bg_login.png and
+   public/enterprise_bank-logo.png): flat navy field, muted navy ink for
+   secondary text, and the logo's orange as the single accent rule.
+   Scoped to the login route; the global application palette is untouched.
+--------------------------------------------------------------------------- */
+:root {
+  --login-navy: #1b2454;
+  --login-navy-muted: #b4bfe4;
+  --login-accent: #e56b0e;
+}
+
+.login-brand-panel {
+  background-color: var(--login-navy);
+}
+
+.login-brand-muted {
+  color: var(--login-navy-muted);
+}
+
+.login-brand-rule {
+  background-color: var(--login-accent);
+}
+
+/*
+ * The anniversary artwork is a 3280×1248 banner: shown uncropped at the foot
+ * of the brand panel (its box keeps the exact aspect ratio, so the
+ * composition is never cut), and its top edge is masked into the flat navy
+ * field above so no seam is visible. Hidden panels never fetch the image.
+ */
+.login-brand-banner {
+  background-image: url("/EBI_bg_login.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
+}
+
 /* Print: only the approval-form sheet goes to paper; app chrome stays out. */
 @media print {
   [data-sidebar],

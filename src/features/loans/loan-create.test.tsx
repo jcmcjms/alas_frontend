@@ -214,8 +214,14 @@ describe("loan creation", () => {
     expect(
       await screen.findByText(/application group submitted/i)
     ).toBeInTheDocument()
-    expect(screen.getByText(/LAM-2026-0017/)).toBeInTheDocument()
-    expect(screen.getByText(/LAM-2026-0018/)).toBeInTheDocument()
+    // Both applications are linked from the submission summary (a success
+    // toast also mentions the ids, so query the links specifically).
+    expect(
+      screen.getByRole("link", { name: /LAM-2026-0017/ })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: /LAM-2026-0018/ })
+    ).toBeInTheDocument()
     // One group number for both applications — the desk serves them together.
     expect(screen.getAllByText(/GRP-2026-0017/).length).toBeGreaterThan(0)
   })

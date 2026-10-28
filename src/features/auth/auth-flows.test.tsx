@@ -20,7 +20,7 @@ describe("authentication flow", () => {
     const app = renderApp("/login")
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: "Sign in" })
+        screen.getByRole("heading", { name: "Welcome back" })
       ).toBeInTheDocument()
     )
 
@@ -40,7 +40,7 @@ describe("authentication flow", () => {
     const app = renderApp("/login")
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: "Sign in" })
+        screen.getByRole("heading", { name: "Welcome back" })
       ).toBeInTheDocument()
     )
     await app.user.type(screen.getByLabelText("Username"), "l.tan")
@@ -54,7 +54,7 @@ describe("authentication flow", () => {
     const app = renderApp("/review-desk")
     // Guard bounces to the login screen while the restore attempt fails.
     expect(
-      await screen.findByRole("heading", { name: "Sign in" })
+      await screen.findByRole("heading", { name: "Welcome back" })
     ).toBeInTheDocument()
     expect(app.router.state.location.pathname).toBe("/login")
   })
@@ -116,7 +116,7 @@ describe("session lifecycle & cache isolation", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: "Sign in" })
+        screen.getByRole("heading", { name: "Welcome back" })
       ).toBeInTheDocument()
     )
     // Cache fully cleared: no account profile left behind.
@@ -152,7 +152,7 @@ describe("session lifecycle & cache isolation", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: "Sign in" })
+        screen.getByRole("heading", { name: "Welcome back" })
       ).toBeInTheDocument()
     )
     // The login screen explains the expired session (role=status banner).
@@ -191,7 +191,7 @@ describe("session lifecycle & cache isolation", () => {
       expect(screen.getByText("ana.reyes@alas.mock")).toBeInTheDocument()
     )
     expect(
-      screen.queryByRole("heading", { name: "Sign in" })
+      screen.queryByRole("heading", { name: "Welcome back" })
     ).not.toBeInTheDocument()
   })
 
@@ -216,7 +216,7 @@ describe("session lifecycle & cache isolation", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByRole("heading", { name: "Sign in" })
+        screen.getByRole("heading", { name: "Welcome back" })
       ).toBeInTheDocument()
     )
     expect(await screen.findByRole("status")).toHaveTextContent(
@@ -240,7 +240,7 @@ describe("session lifecycle & cache isolation", () => {
       await screen.findByRole("menuitem", { name: /sign out/i })
     )
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument()
     )
     setMockScenario("default")
 
@@ -259,5 +259,130 @@ describe("session lifecycle & cache isolation", () => {
       ])
       expect(cached?.email).toBe("maria.domingo@alas.mock")
     })
+  })
+})
+
+describe("login screen contract", () => {
+  it("presents Enterprise Bank branding and the application identity", async () => {
+    renderApp("/login")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Welcome back" })
+      ).toBeInTheDocument()
+    )
+    // Logo appears in the desktop brand panel and the compact mobile header.
+    expect(screen.getAllByAltText("Enterprise Bank").length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText("Automated Loan Application System").length
+    ).toBeGreaterThan(0)
+    expect(screen.getByText("Authorized personnel only.")).toBeInTheDocument()
+  })
+
+  it("toggles password visibility through an accessible, tab-reachable control", async () => {
+    const app = renderApp("/login")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Welcome back" })
+      ).toBeInTheDocument()
+    )
+    const password = screen.getByLabelText(/^Password/)
+    await app.user.type(password, DEMO_PASSWORD)
+
+    const show = screen.getByRole("button", { name: "Show password" })
+    // The toggle stays in the tab order (no negative tabindex).
+    expect(show.tabIndex).toBeGreaterThanOrEqual(0)
+    expect(password).toHaveAttribute("type", "password")
+
+    await app.user.click(show)
+    expect(password).toHaveAttribute("type", "text")
+    expect(password).toHaveValue(DEMO_PASSWORD)
+    await app.user.click(screen.getByRole("button", { name: "Hide password" }))
+    expect(password).toHaveAttribute("type", "password")
+  })
+
+  it("validates empty fields with per-field errors", async () => {
+    const app = renderApp("/login")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Welcome back" })
+      ).toBeInTheDocument()
+    )
+    await app.user.click(screen.getByRole("button", { name: /^sign in$/i }))
+
+    const alerts = await screen.findAllByRole("alert")
+    const messages = alerts.map((node) => node.textContent).join(" ")
+    expect(messages).toMatch(/username is required/i)
+    expect(messages).toMatch(/password is required/i)
+    expect(screen.getByLabelText("Username")).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    )
+  })
+
+  it("keeps the forgot-password route linked from the password field", async () => {
+    renderApp("/login")
+    const link = await screen.findByRole("link", { name: /forgot password/i })
+    expect(link).toHaveAttribute("href", "/forgot-password")
+  })
+
+  it("shows signing progress and blocks duplicate submission", async () => {
+    const app = renderApp("/login")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Welcome back" })
+      ).toBeInTheDocument()
+    )
+    const { setMockScenario } = await import("@/mocks/scenarios")
+    setMockScenario("slow")
+    try {
+      await app.user.type(screen.getByLabelText("Username"), "encoder")
+      await app.user.type(screen.getByLabelText(/^Password/), DEMO_PASSWORD)
+      await app.user.click(screen.getByRole("button", { name: /^sign in$/i }))
+
+      const busy = await screen.findByRole("button", { name: /signing in/i })
+      expect(busy).toBeDisabled()
+      // A disabled submit cannot fire a second request while in flight.
+      await app.user.click(busy)
+      expect(screen.getAllByRole("button", { name: /signing in/i })).toHaveLength(1)
+
+      // The slow login still completes and lands on the dashboard.
+      expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument()
+    } finally {
+      setMockScenario("default")
+    }
+  })
+
+  it("walks the expected keyboard order through the form", async () => {
+    const app = renderApp("/login")
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Welcome back" })
+      ).toBeInTheDocument()
+    )
+    expect(screen.getByLabelText("Username")).toHaveFocus()
+    await app.user.tab()
+    expect(screen.getByLabelText(/^Password/)).toHaveFocus()
+    await app.user.tab()
+    expect(screen.getByRole("button", { name: "Show password" })).toHaveFocus()
+    await app.user.tab()
+    expect(screen.getByRole("link", { name: /forgot password/i })).toHaveFocus()
+    await app.user.tab()
+    expect(screen.getByRole("button", { name: /^sign in$/i })).toHaveFocus()
+  })
+
+  it("redirects authenticated users away from the login route", async () => {
+    const app = renderApp("/login")
+    await signInAs(app.user, "encoder")
+    app.router.navigate("/login")
+    expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Welcome back" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("sends mustChangePassword accounts straight to the change flow", async () => {
+    const app = renderApp("/login")
+    await signInAs(app.user, "newhire")
+    expect(app.router.state.location.pathname).toBe("/change-password")
   })
 })

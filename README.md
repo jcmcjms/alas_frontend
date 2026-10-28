@@ -23,8 +23,9 @@ npm run dev            # http://localhost:5173 with the MSW mock API enabled
 
 Sign in with any demo account (mock mode only, password `Passw0rd!`):
 `encoder`, `recommender`, `evaluator`, `approver`, `approver2`, `admin`.
-The login screen lists them when mock mode is active; that panel never renders
-in production builds.
+The login screen lists them behind a collapsed "Development mock accounts"
+disclosure when mock mode is active; that surface never renders in production
+builds.
 
 ## 2. Commands
 

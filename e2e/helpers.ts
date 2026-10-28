@@ -20,7 +20,7 @@ export async function submitLogin(
   await field.fill(username)
   await page.getByLabel(/^Password/).fill(password)
   await page.getByRole("button", { name: /sign in/i }).click()
-  await expect(page.getByRole("heading", { name: "Sign in" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toHaveCount(0)
   await expect(page.getByRole("link", { name: /alas v3 home/i })).toBeVisible()
 }
 

@@ -127,7 +127,27 @@ refresh-cookie semantics.
 npm ci
 npm run typecheck   # 0 errors
 npm run lint        # 0 errors / 3 informational warnings
-npm test            # 110 passed
+npm test            # 129 passed
 npm run build       # success
 npx playwright install chromium && npm run test:e2e   # outside this sandbox
 ```
+
+## 7. Login redesign verification (2026-10-28)
+
+Split-screen Enterprise Bank sign-in (brand panel + authentication panel),
+implemented on the existing auth logic (RHF + Zod + `useSession()`), verified:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | 0 errors (app + node configs) |
+| `npm run lint` | 0 errors, 3 informational react-compiler warnings (pre-existing) |
+| `npm test` | 129 passed / 18 files (incl. new login contract + mock-gating tests) |
+| `npm run build` | success; `dist/` scan clean of mock code and service worker |
+| `npx playwright test --project=firefox` | 25 passed (20 first-try, 5 flaky-then-passed on retry: known Firefox SW-claim race in this sandbox, AUDIT A-21); 0 failed |
+| `e2e/login-responsive.spec.ts` (Firefox, real browser) | 14/14: no horizontal overflow and visible primary action at 320×640 … 2560×1440 + 1280×600 / 800×400 short windows; keyboard order username → password → show/hide → forgot → submit; mock picker collapsed by default |
+| Visual audit (Firefox screenshots) | 1440×900, 1280×800, 1024×768, 768×1024, 430×932, 390×844, 320×640, 1280×600, 2560×1440, dark theme, validation/server-error/mock-open/focus states — reviewed and refined (mobile header leak at ≥lg fixed, brand lockup moved into the centered flow on small screens) |
+
+Chromium E2E remains unverified in this sandbox (renderer blocked); CI runs
+chromium + firefox. Unit-suite note: one load-sensitive flake was observed once
+under 2-core contention in `approval.test.tsx` (stable 3/3 in isolation and on
+reruns); no assertion was weakened.
